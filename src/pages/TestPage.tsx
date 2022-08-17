@@ -13,9 +13,9 @@ import { ExampleData } from 'types';
 
 const TestPage = (): JSX.Element => {
   // useEffect(() => {
-  //   const unlisten = listen<number>('update_score', (event) => {
+  //   const unlisten = listen<number>('event-name', (event) => {
   //     console.log(event);
-  //     setScore(event.payload);
+  //     // setScore(event.payload);
   //   });
   // }, []);
 

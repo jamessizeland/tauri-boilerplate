@@ -6,11 +6,13 @@
 mod ipc;
 mod utils;
 
+use rand::random;
 use tauri::Manager;
+
 // the payload type must implement `Serialize` and `Clone`.
 #[derive(Clone, serde::Serialize)]
 struct Payload {
-    message: String,
+    value: u32,
 }
 
 fn main() {
@@ -25,13 +27,8 @@ fn main() {
             app.unlisten(id);
 
             // emit the `event-name` event to all webview windows on the frontend
-            app.emit_all(
-                "event-name",
-                Payload {
-                    message: "Tauri is awesome!".into(),
-                },
-            )
-            .unwrap();
+            app.emit_all("event-name", Payload { value: random() })
+                .unwrap();
             Ok(())
         })
         .manage(utils::DataStore(Default::default()))

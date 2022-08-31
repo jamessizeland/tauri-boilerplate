@@ -6,32 +6,16 @@
 mod ipc;
 mod utils;
 
-use rand::random;
-use tauri::Manager;
-
-// the payload type must implement `Serialize` and `Clone`.
-#[derive(Clone, serde::Serialize)]
-struct Payload {
-    value: u32,
-}
+use ipc::{spawn_event_thread, Payload};
+use std::sync::Mutex;
+use tauri::async_runtime::channel;
 
 fn main() {
+    let (tx, rx) = channel::<Payload>(5);
     tauri::Builder::default()
-        .setup(|app| {
-            // listen to the `event-name` (emitted on any window)
-            let id = app.listen_global("event-name", |event| {
-                println!("got event-name with payload {:?}", event.payload());
-            });
-            // unlisten to the event using the `id` returned on the `listen_global` function
-            // an `once_global` API is also exposed on the `App` struct
-            app.unlisten(id);
-
-            // emit the `event-name` event to all webview windows on the frontend
-            app.emit_all("event-name", Payload { value: random() })
-                .unwrap();
-            Ok(())
-        })
+        .setup(|app| spawn_event_thread(app, rx))
         .manage(utils::DataStore(Default::default()))
+        .manage(ipc::QueueHandler(Mutex::new(tx)))
         .invoke_handler(tauri::generate_handler![
             // list all callable actions here
             ipc::mod_state

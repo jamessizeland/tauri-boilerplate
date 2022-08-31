@@ -2,9 +2,36 @@
 //!
 //! Recieve actions from the Front End and respond to them.
 
-use crate::utils::get_unix_time;
-
 use super::utils::{Data, DataStore};
+use crate::utils::get_unix_time;
+use serde::{ser::StdError, Serialize};
+use std::{sync::Mutex, thread};
+use tauri::{async_runtime::Receiver, Manager}; // mutual exclusion wrapper
+
+#[derive(Clone, Serialize, Debug)]
+pub struct Payload {
+    pub event: String,
+    pub payload: String,
+}
+
+pub struct QueueHandler(pub Mutex<tauri::async_runtime::Sender<Payload>>);
+
+/// Set up a separate thread handler to pass data via events from Tauri -> frontend
+pub fn spawn_event_thread(
+    app: &mut tauri::App,
+    mut rx: Receiver<Payload>,
+) -> Result<(), Box<(dyn StdError + 'static)>> {
+    let window = app.get_window("main").unwrap();
+    let _handle = thread::spawn(move || {
+        println!("spawning a new thread to handle unprompted events from Rust to the UI");
+        loop {
+            let payload = rx.blocking_recv().unwrap();
+            println!("{}, {}", payload.event, payload.payload);
+            window.emit(&payload.event, payload.payload).unwrap();
+        }
+    });
+    Ok(())
+}
 
 #[tauri::command]
 /// Example of getting an event from frontend and returning a response
